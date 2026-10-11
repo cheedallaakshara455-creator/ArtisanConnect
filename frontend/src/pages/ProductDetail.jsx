@@ -47,7 +47,18 @@ const ProductDetail = () => {
       await api.post('/api/cart', { productId: product.id, quantity: qty });
       showToast('Added to cart successfully!', 'success');
     } catch (err) {
-      showToast('Failed to add to cart', 'error');
+      const status = err.response?.status;
+      const message = status && status < 500 ? err.response?.data?.message : null;
+      const fallback = !err.response
+        ? 'Could not reach the backend. Check the Render service and Vercel API URL.'
+        : status === 401
+          ? 'Your login session expired. Log in again and retry.'
+          : status === 403
+            ? 'Only customer accounts can add products to the cart.'
+            : status >= 500
+              ? 'The backend could not save the cart item. Check the Render service logs.'
+            : `Could not add this item${status ? ` (HTTP ${status})` : ''}.`;
+      showToast(message || fallback, 'error');
     }
   };
 
