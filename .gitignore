@@ -1,0 +1,26 @@
+# IDE and operating-system files
+.idea/
+.vscode/
+Thumbs.db
+Desktop.ini
+
+# Frontend dependencies and build output
+frontend/node_modules/
+frontend/dist/
+
+# Backend build output
+backend/target/
+backend/data/
+backend/maven/
+backend/apache-maven.zip
+
+# Local environment files and secrets
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Logs
+*.log
