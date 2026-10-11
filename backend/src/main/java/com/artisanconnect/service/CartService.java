@@ -35,7 +35,12 @@ public class CartService {
         }
 
         Cart cart = cartRepository.findByCustomerIdAndProductId(customer.getId(), product.getId())
-                .orElse(Cart.builder().customer(customer).product(product).quantity(0).build());
+                .orElse(Cart.builder()
+                        .customer(customer)
+                        .legacyUserId(customer.getId())
+                        .product(product)
+                        .quantity(0)
+                        .build());
 
         cart.setQuantity(cart.getQuantity() + request.getQuantity());
         return cartRepository.save(cart);
