@@ -59,10 +59,10 @@ Frontend runs on: http://localhost:5173
 ### Backend (application.properties / Render env vars)
 | Variable | Description |
 |---|---|
-| `DB_URL` | Required on Render; JDBC URL for the TiDB `artisan_db` schema |
-| `DB_USER` | TiDB Cloud database username |
+| `DB_URL` | Optional JDBC URL override; default TiDB URL targets `artisan_db` |
+| `DB_USER` | Optional TiDB username override |
 | `DB_PASS` | TiDB password; prompt locally with `backend/run-tidb.ps1`, set as a secret in hosting |
-| `JWT_SECRET` | JWT signing secret; use at least 64 UTF-8 bytes and keep the same value across restarts |
+| `JWT_SECRET` | JWT signing secret (min 32 chars) |
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
 | `CLOUDINARY_API_KEY` | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret |
@@ -79,37 +79,12 @@ Frontend runs on: http://localhost:5173
 ## 🚢 Deployment
 
 ### Backend → Render (TiDB Cloud)
-The repository includes `render.yaml` and `backend/Dockerfile`. Render builds the backend with Java 17 and starts the Spring Boot app in the Docker image.
-
-1. Push the project to GitHub. In Render, choose **New → Blueprint**, connect the repository, and select the repository root. Render reads `render.yaml`; the Dockerfile path is `backend/Dockerfile` and the Docker build context is `backend`.
-2. When Render asks for values marked `sync: false`, enter the settings below. Use the same TiDB Cloud cluster and `artisan_db` database that contain your products and users:
-
-   | Render variable | Value |
-   |---|---|
-   | `SPRING_PROFILES_ACTIVE` | `prod` (the Blueprint sets this) |
-   | `DB_URL` | `jdbc:mysql://gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/artisan_db?sslMode=VERIFY_IDENTITY&enabledTLSProtocols=TLSv1.2,TLSv1.3` |
-   | `DB_USER` | The TiDB Cloud database username shown in the project's `application-tidb.properties` or TiDB **Connect** page |
-   | `DB_PASS` | Your rotated TiDB password; enter it only in Render's environment settings |
-   | `JWT_SECRET` | A newly generated secret of at least 64 UTF-8 bytes. Keep it private and stable across backend restarts. |
-   | `ALLOWED_ORIGINS` | Initially `http://localhost:5173`; replace this with the Vercel site origin after frontend deployment |
-   | `RAZORPAY_KEY_ID` | Optional for browsing; use your Razorpay key if checkout is enabled |
-   | `RAZORPAY_KEY_SECRET` | Optional for browsing; set as a secret if checkout is enabled |
-
-   Do not use the local development profile on Render. Do not paste database passwords or signing keys into GitHub, this README, or source files.
-
-   To generate a strong JWT secret in PowerShell, run this locally and paste the output directly into Render's `JWT_SECRET` field. Keep it private:
-
-   ```powershell
-   $bytes = New-Object byte[] 64
-   [Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
-   [Convert]::ToBase64String($bytes)
-   ```
-
-3. Click **Apply** to create/deploy the service. Open its **Logs** in Render and wait for the deployment to finish and Spring Boot to report that it started. If startup fails, check the first database/JWT error in the logs and confirm the `DB_URL`, username, password, and TiDB network access.
-4. Copy the service's public URL from Render, for example `https://artisan-connect-backend.onrender.com`. Check that the API responds by opening `https://YOUR-SERVICE.onrender.com/api/products?page=0&size=12`. A JSON response (including an empty products list) means the frontend can reach the backend; a database error means the Render-to-TiDB connection needs attention.
-5. Deploy the frontend to Vercel as described below, then return to Render → **Environment** and set `ALLOWED_ORIGINS` to the exact Vercel origin, for example `https://your-site.vercel.app` (no trailing slash). Save and redeploy the backend so browsers are allowed to call it.
-
-For an existing Render service instead of a new Blueprint, open that service's **Environment** page and add/update the same variables. Keep the repository root as the service root so the paths in `render.yaml` remain correct. A Render free service may take a little while to wake after being idle; the first request can be slower.
+1. Push code to GitHub
+2. In Render, create a Blueprint from the repository root, or create a Docker Web Service with the repository root as its **Root Directory**. The Dockerfile is `backend/Dockerfile` and its context is `backend`.
+3. Set `SPRING_PROFILES_ACTIVE=prod`.
+4. Set `DB_URL` to the TiDB JDBC URL for `artisan_db` with TLS, and set `DB_USER`, `DB_PASS`, and a newly generated `JWT_SECRET` as secret environment variables.
+5. Set `ALLOWED_ORIGINS` to the exact Vercel site origin (for example, `https://your-site.vercel.app`, with no trailing slash). Add payment variables if checkout needs Razorpay.
+6. Deploy and copy the Render service URL, such as `https://your-service.onrender.com`.
 
 ### Frontend → Vercel
 1. Import the GitHub repository in [Vercel](https://vercel.com).
