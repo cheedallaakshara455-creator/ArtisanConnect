@@ -18,6 +18,12 @@ public class Order {
     @JoinColumn(name = "user_id", nullable = false)
     private User customer;
 
+    // Some existing deployments still require this legacy owner column.
+    // Keep it in sync with the canonical user_id association during migration.
+    @JsonIgnore
+    @Column(name = "customer_id", nullable = false)
+    private Long legacyCustomerId;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @Builder.Default
     private List<OrderItem> items = new ArrayList<>();
@@ -38,5 +44,17 @@ public class Order {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+        syncLegacyCustomerId();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        syncLegacyCustomerId();
+    }
+
+    private void syncLegacyCustomerId() {
+        if (customer != null) {
+            legacyCustomerId = customer.getId();
+        }
     }
 }
